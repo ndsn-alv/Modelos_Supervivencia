@@ -1,0 +1,163 @@
+---
+title: "Proyecto Supervivencia"
+author: "Nicolás de Silva Nacenta"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+rm(list = ls(all.names = TRUE))
+gc()
+
+library(ggplot2)
+library(survival)
+library(survminer)
+library(dplyr)
+
+```
+
+## Análisis descriptivo
+
+```{r}
+
+data <- colon
+
+# La base original tiene una observacion por cada paciente donde etype = 1 (recurrencia) y otra donde etype = 2 (muerte).
+
+data <- data %>% 
+  filter(etype == 2) %>% # tipo de evento: muerte (no nos interesa la recurrencia del paciente)
+  mutate(
+    sex = factor(sex, levels = c(0,1), labels = c("female", "male")), # Factores a todas las categorias
+    obstruct = factor(obstruct, levels = c(0,1)),
+    perfor = factor(perfor, levels = c(0,1)),
+    adhere = factor(adhere, levels = c(0,1)),
+    differ = factor(differ, levels = c(1,2,3), labels = c("well", "moderate", "poor")),
+    extent = factor(extent, levels = c(1,2,3,4), labels = c("submucosa", "muscle", "serosa", "contiguous structures")),
+    surg = factor(surg, levels = c(0,1), labels = c("short", "long")),
+    node4 = factor(node4, levels = c(0,1))
+  ) %>% 
+  dplyr::select(-study, -etype)
+
+```
+
+### Ajuste de un modelo de Cox
+
+```{r}
+
+data_ref <- data %>% mutate(
+    rx = recode(rx, "Obs" = "Obs/Lev", "Lev" = "Obs/Lev") 
+  ) %>% 
+  dplyr::select(id, time, status, rx, adhere, nodes, surg) %>% na.omit() 
+
+# Base de datos refinada (union de varias categorias debido a frecuencias bajas)
+
+mod <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + I(nodes^2) + surg, data = data_ref)
+summary(mod)
+
+```
+
+### Análisis residual
+
+```{r}
+
+# Cox - Snell 
+res_mart = residuals(mod,type='martingale')
+res_cs = (data_ref$status == 1) - res_mart
+data_ref$res_cs = res_cs
+
+# KM using the Cox-Snell residuals as the times
+fit_cs = survfit(Surv(res_cs, status == 1) ~ 1, data = data_ref)
+
+# Plot cumulative hazard
+df = data.frame(x=fit_cs$time,y=-log(fit_cs$surv))
+
+ggplot(data=df,aes(x=x,y=y))+
+  geom_line(col='darkgrey')+
+  geom_point(size=.5)+
+  labs(x="Cox-Snell residuals",y=expression(hat(H[t])))+
+  geom_abline(intercept=0,slope=1,col="red")
+
+# Martingala
+
+# Martingale residuals vs continuous variables
+data_ref$res_mart = res_mart
+
+ggplot(data=data_ref,aes(x=nodes,y=res_mart))+
+  geom_point()+
+  geom_smooth(method = "loess", se = T, span = 0.75)+
+  labs(x='Nodes',y='Martingale residuals')
+
+
+# Devianza
+
+res_dev = residuals(mod,type='deviance')
+data_ref$res_dev = res_dev
+
+ggplot(data=data_ref,aes(x=id,y=res_dev))+
+  geom_point()+
+  geom_hline(yintercept=0,col='red')+
+  labs(x="",y="Deviance residuals")
+
+# Delta-betas
+res_dbs = residuals(mod, type = "dfbetas")
+res_db = residuals(mod, type = "dfbeta")
+
+# number of observations (n) and covariates (k)
+n = nrow(data_ref)
+k = 5
+id = rep(1:n, k)
+
+vars = c(rep('rxLev+5FU',n),rep('adhere1',n),rep('nodes',n),
+         rep('nodes^2',n),rep('surglong',n))
+
+val_std = c(res_dbs[,1],res_dbs[,2],res_dbs[,3],
+            res_dbs[,4], res_dbs[,5])
+
+val = c(res_db[,1],res_db[,2],res_db[,3],
+        res_db[,4], res_db[,5])
+
+db_df=data.frame(x=id,y_std=val_std,y=val,name=vars)
+
+ggplot(data=db_df,aes(x=x,y=y_std,col=name))+
+  geom_line()+
+  labs(x='',y=expression(Delta[i]*beta[j]),
+       color = "Covariate")
+
+# Likelihood displacement
+LD = numeric(n)
+res_u = residuals(mod,type='score')
+var_beta = mod$var
+
+for(i in 1:n){
+  LD[i]=t(res_u[i,])%*%var_beta%*%res_u[i,]
+}
+
+id = c(1:n)
+LD_df = data.frame(x=id,y=LD)
+
+ggplot(data=LD_df,aes(x=id,y=y))+
+  geom_point()+
+  labs(x="",y=expression(LD[i]))
+
+View(LD_df %>% filter(y>.05))
+
+cox.zph(mod)
+
+View(db_df %>% filter(abs(y_std)>.15))
+```
+
+```{r}
+data_ref$Psi <- exp(
+  predict(mod, newdata = data_ref,
+          type = "lp", reference = "zero")
+)
+
+ggplot(data_ref, aes(x = Psi, fill = rx)) + geom_histogram()
+```
+
