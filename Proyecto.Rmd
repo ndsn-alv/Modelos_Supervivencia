@@ -172,4 +172,3 @@ View(db_df %>% filter(abs(y_std)>.15))
 
 ### 5. Ajuste de una regresión paramétrica.
 
-hola
