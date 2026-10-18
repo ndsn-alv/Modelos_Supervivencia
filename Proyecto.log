@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.6.4)  18 OCT 2026 14:03
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.6.4)  18 OCT 2026 14:09
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -390,7 +390,7 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 28
 File: bkm-pdftex.def 2023-12-10 v1.31 bookmark driver for pdfTeX and luaTeX (HO)
 \BKM@id=\count326
 ))
-LaTeX Font Info:    Trying to load font information for T1+lmr on input line 86.
+LaTeX Font Info:    Trying to load font information for T1+lmr on input line 87.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/t1lmr.fd
 File: t1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
@@ -399,24 +399,24 @@ File: l3backend-pdftex.def 2026-02-18 L3 backend support: PDF output (pdfTeX)
 ) (./Proyecto.aux)
 \openout1 = `Proyecto.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 86.
-LaTeX Font Info:    ... okay on input line 86.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 87.
+LaTeX Font Info:    ... okay on input line 87.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
@@ -457,15 +457,15 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-LaTeX Info: Redefining \microtypecontext on input line 86.
-Package microtype Info: Applying patch `item' on input line 86.
-Package microtype Info: Applying patch `toc' on input line 86.
-Package microtype Info: Applying patch `eqnum' on input line 86.
+LaTeX Info: Redefining \microtypecontext on input line 87.
+Package microtype Info: Applying patch `item' on input line 87.
+Package microtype Info: Applying patch `toc' on input line 87.
+Package microtype Info: Applying patch `eqnum' on input line 87.
 
-Package microtype Warning: Unable to apply patch `footnote' on input line 86.
+Package microtype Warning: Unable to apply patch `footnote' on input line 87.
 
-Package microtype Info: Applying patch `verbatim' on input line 86.
-LaTeX Info: Redefining \microtypesetup on input line 86.
+Package microtype Info: Applying patch `verbatim' on input line 87.
+LaTeX Info: Redefining \microtypesetup on input line 87.
 Package microtype Info: Generating PDF output.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using protrusion set `basicmath'.
@@ -479,36 +479,36 @@ Package microtype Info: No adjustment of character kerning.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/microtype/mt-cmr.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman (RS)
 )
-Package hyperref Info: Link coloring OFF on input line 86.
-LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 88.
+Package hyperref Info: Link coloring OFF on input line 87.
+LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 89.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/ot1lmr.fd
 File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
-LaTeX Font Info:    Trying to load font information for OML+lmm on input line 88.
+LaTeX Font Info:    Trying to load font information for OML+lmm on input line 89.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
-LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 88.
+LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 89.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
-LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 88.
+LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 89.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/omxlmex.fd
 File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 88.
+(Font)              <12> on input line 89.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 88.
+(Font)              <8> on input line 89.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 88.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 88.
+(Font)              <6> on input line 89.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 89.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 ) (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/microtype/mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 88.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 89.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/microtype/mt-msb.cfg
@@ -519,36 +519,36 @@ File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 <Proyecto_files/figure-latex/figura-1.pdf, id=17, 505.89pt x 230.8625pt>
 File: Proyecto_files/figure-latex/figura-1.pdf Graphic file (type pdf)
 <use Proyecto_files/figure-latex/figura-1.pdf>
-Package pdftex.def Info: Proyecto_files/figure-latex/figura-1.pdf  used on input line 184.
+Package pdftex.def Info: Proyecto_files/figure-latex/figura-1.pdf  used on input line 185.
 (pdftex.def)             Requested size: 505.88875pt x 230.86192pt.
 
-Overfull \hbox (36.13373pt too wide) in paragraph at lines 184--184
+Overfull \hbox (36.13373pt too wide) in paragraph at lines 185--185
  [] 
  []
 
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 194.
+(Font)              <10> on input line 195.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 194.
+(Font)              <7> on input line 195.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 194.
+(Font)              <5> on input line 195.
 [2{c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc} <./Proyecto_files/figure-latex/figura-1.pdf>]
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 275.
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 276.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [3{c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}]
 <Proyecto_files/figure-latex/unnamed-chunk-7-1.pdf, id=43, 469.755pt x 325.215pt>
 File: Proyecto_files/figure-latex/unnamed-chunk-7-1.pdf Graphic file (type pdf)
 <use Proyecto_files/figure-latex/unnamed-chunk-7-1.pdf>
-Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-7-1.pdf  used on input line 457.
+Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-7-1.pdf  used on input line 458.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 <Proyecto_files/figure-latex/unnamed-chunk-7-2.pdf, id=44, 469.755pt x 325.215pt>
 File: Proyecto_files/figure-latex/unnamed-chunk-7-2.pdf Graphic file (type pdf)
 <use Proyecto_files/figure-latex/unnamed-chunk-7-2.pdf>
-Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-7-2.pdf  used on input line 458.
+Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-7-2.pdf  used on input line 459.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 457--459
+Underfull \hbox (badness 10000) in paragraph at lines 458--460
 [][]
  []
 
@@ -556,26 +556,26 @@ Underfull \hbox (badness 10000) in paragraph at lines 457--459
 <Proyecto_files/figure-latex/unnamed-chunk-8-1.pdf, id=60, 469.755pt x 325.215pt>
 File: Proyecto_files/figure-latex/unnamed-chunk-8-1.pdf Graphic file (type pdf)
 <use Proyecto_files/figure-latex/unnamed-chunk-8-1.pdf>
-Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-8-1.pdf  used on input line 462.
+Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-8-1.pdf  used on input line 463.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 [6 <./Proyecto_files/figure-latex/unnamed-chunk-7-2.pdf>]
 <Proyecto_files/figure-latex/unnamed-chunk-9-1.pdf, id=73, 469.755pt x 325.215pt>
 File: Proyecto_files/figure-latex/unnamed-chunk-9-1.pdf Graphic file (type pdf)
 <use Proyecto_files/figure-latex/unnamed-chunk-9-1.pdf>
-Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-9-1.pdf  used on input line 466.
+Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-9-1.pdf  used on input line 467.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 <Proyecto_files/figure-latex/unnamed-chunk-9-2.pdf, id=74, 469.755pt x 325.215pt>
 File: Proyecto_files/figure-latex/unnamed-chunk-9-2.pdf Graphic file (type pdf)
 <use Proyecto_files/figure-latex/unnamed-chunk-9-2.pdf>
-Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-9-2.pdf  used on input line 467.
+Package pdftex.def Info: Proyecto_files/figure-latex/unnamed-chunk-9-2.pdf  used on input line 468.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 466--468
+Underfull \hbox (badness 10000) in paragraph at lines 467--469
 [][]
  []
 
 [7 <./Proyecto_files/figure-latex/unnamed-chunk-8-1.pdf>] [8 <./Proyecto_files/figure-latex/unnamed-chunk-9-1.pdf>]
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 471.
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 472.
 (c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [9 <./Proyecto_files/figure-latex/unnamed-chunk-9-2.pdf>] (./Proyecto.aux)
@@ -587,13 +587,13 @@ L3 programming layer <2026-04-28>
 Here is how much of TeX's memory you used:
  13638 strings out of 469331
  219182 string characters out of 5464602
- 687713 words of memory out of 5000000
+ 688407 words of memory out of 5000000
  42145 multiletter control sequences out of 15000+600000
  678764 words of font info for 133 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 83i,7n,93p,2362b,557s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 83i,7n,93p,2362b,555s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi7.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr5.pfb><c:/Users/nicod/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt10.pfb>
-Output written on Proyecto.pdf (9 pages, 451983 bytes).
+Output written on Proyecto.pdf (9 pages, 456302 bytes).
 PDF statistics:
  169 PDF objects out of 1000 (max. 8388607)
  124 compressed objects within 2 object streams

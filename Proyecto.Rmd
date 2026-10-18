@@ -1,7 +1,7 @@
 ---
-title: "Proyecto Supervivencia"
-author: "Nicolás de Silva Nacenta"
-date: "`r Sys.Date()`"
+title: "Análisis de supervivencia sobre quimioterapia en cáncer de cólon"
+author: "De Silva Nacenta Nicolás, Rodríguez Donato Israel y García Maya Ximena"
+date: "20 de octubre de 2026"
 output: pdf_document
 ---
 
