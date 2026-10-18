@@ -19,6 +19,7 @@ library(ggplot2)
 library(survival)
 library(survminer)
 library(dplyr)
+library(knitr)
 
 ```
 
@@ -38,49 +39,164 @@ data <- data %>%
     perfor = factor(perfor, levels = c(0,1)),
     adhere = factor(adhere, levels = c(0,1)),
     differ = factor(differ, levels = c(1,2,3), labels = c("well", "moderate", "poor")),
-    extent = factor(extent, levels = c(1,2,3,4), labels = c("submucosa", "muscle", "serosa", "contiguous structures")),
+    extent = relevel(factor(extent, levels = c(1,2,3,4), labels = c("submucosa", "muscle", "serosa", "cont.str")), ref = "serosa"), # Se especifico a serosa como grupo de referencia (es el que mas observaciones tiene y puede facilitar la interpretacion)
     surg = factor(surg, levels = c(0,1), labels = c("short", "long")),
-    node4 = factor(node4, levels = c(0,1))
+    node4_ = factor(node4, levels = c(0,1))
   ) %>% 
-  dplyr::select(-study, -etype)
-
+  dplyr::select(-study, -etype, -node4) %>% na.omit()
 ```
 
+### 4. Ajuste de un modelo de Cox. Se ajusta un modelo de riesgos proporcionales usando todas las covariables de la base datos. Obtenemos 15 parámetros de las cuales individualmente solo 6 son significativos. 
 
+**Razones de riesgo (HR).** Las HR de las covariables categóricas indican que si el individuo se encuentra en uno de los siguientes grupos su riesgo aumenta o disminuye respecto al grupo base a una proporción $\exp(\beta)$. 
 
+$$
+\frac{h_j(t; \text{Grupo} = 1)}{h_i(t; \text{Grupo} = 0)} = e^{\beta_\text{Grupo}}
+$$
 
+Por otro lado, si la variable es numérica (nodes) quiere decir que cada unidad adicional de nódulos linfáticos aumenta o disminuye en una proporción $\exp(\beta)$.
 
-### 4. Ajuste de un modelo de Cox.
+$$
+\frac{h_j(t; \text{nodes} = X + 1)}{h_i(t; \text{nodes} = X)} = e^{\beta_\text{nodes}}
+$$
 
+**Intervalos de confianza.** Las razones estimadas y sus intervalos de confianza al 95% de confianza están dadas por la siguiente tabla.
 
+```{r}
+## MODELO ORGINAL - Todas las covariables
+
+mod_og <- coxph(Surv(time, status == 1) ~ rx + sex + age + obstruct + perfor + adhere + nodes + differ + extent + surg + node4_, data = data)
+
+mod_og_fit <- summary(mod_og)
+
+## EXTRAEMOS COEFICIENTES E INTERVALOS DE CONFIANZA
+
+mod_og_coeffs <-  as.data.frame(mod_og_fit$coefficients) %>%
+  cbind(as.data.frame(mod_og_fit$conf.int[,-1]))
+  
+## Mostrar los coeficientes y su efecto (exp(coef))
+
+kable(
+  mod_og_coeffs %>% select(coef, `Pr(>|z|)`, `exp(coef)`, `lower .95`, `upper .95`),
+  digits = 4,
+  caption = "Coeficientes, IC 95% y su efecto"
+)
+```
+
+De los coeficientes significantes se registran los siguientes efectos (aumentos si $\exp(\beta) > 1$ y disminuciones si $\exp(\beta) < 1$) al riesgo base.
+
+- rxLev+5FU: disminución de 31.23%.
+- obstruct1: aumento de 30.58%.
+- nodes: aumento de 4.48% por cada nódulo linfático adicional.
+- extentmuscle: disminución de 39.01%.
+- surglong: aumento de 26.42%.
+- node4_1: aumento de 96.6%.
+
+Tenemos muchos coeficientes que no son significativos y su presencia puede afectar de manera general al ajuste asi como causar el incumplimiento del supuesto de riesgos proporcionales. Sin embargo, variables como extentsubmucosa, extentcont.str y age siguen cuasando cierto efecto que vale la pena investigar. Esto es en especial notorio por los intervalos de confianza que aunque incluyen al cero mantiene un efecto contrario al estimado relativamente leve (depende de la variable).
+
+El resto de variables aportan un efecto confuso y se debe realiza una selección de variables con cuidado. 
+
+**Significancia global.** Según las pruebas de Wald, Score y Log-rank se asume la hipótesis nula de coeficientes nulos en todo el modelo, por lo que al rechazar la hipótesis se tiene que al menos una covariable es significativa para el modelo global. Los resultados de las pruebas se muestran en la siguiente tabla. 
 
 ```{r}
 
-data_ref <- data %>% mutate(
-    rx = recode(rx, "Obs" = "Obs/Lev", "Lev" = "Obs/Lev") 
-  ) %>% na.omit() 
-
-data <- na.omit(data)
-
-# Base de datos refinada (union de dos grupos de rx, ua que uno de ellos no era singificante
-
-# Modelo con todas las covariables
-
-mod_og <- coxph(Surv(time, status == 1) ~ rx + sex + age + obstruct + perfor + adhere + nodes + differ + extent + surg + node4, data = data)
+## Extraccion de los pvalores de las pruebas globales
 
 kable(
-  (summary(mod_og))$coefficients,
+  data.frame(
+    Prueba = c("Wald", "Score", "Log"),
+    df = c(mod_og_fit$waldtest[2], mod_og_fit$sctest[2], mod_og_fit$logtest[2]),
+    p_valor = c(mod_og_fit$waldtest[3], mod_og_fit$sctest[3], mod_og_fit$logtest[3])
+  ),
   digits = 4,
-  caption = "Coeficientes del modelo con todas las covariables"
+  caption = "Pruebas de significancia global"
 )
-                
-mod <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + surg, data = data_ref)
-summary(mod)
-
 
 ```
 
-### Análisis residual
+Son rechazadas todas las pruebas, el modelo es significativo globalmente. Se observa una concordancia de 67.51% indicando un ajuste modesto.
+
+**Selección de variables.** Realizando una prueba de ZPH en el modelo con todas las covariables se verificó que solamente tres variables no cumplen el supuesto de riesgos proporcionales individualmente (obstruct, differ, node4). Estas afectan al modelo global y es mejor eliminarlas (incluso si algunas son significantes).
+
+Otro cambio que se realizó fue en la base directamente al unir rxLev y rxObs con el objetivo de refinar el modelo ligeramente. Esta decisión surgió ya que al grupo al que se le aplicó levamisol (un fármaco utilizado contra gusanos parásitos) no es significante contra el riesgo base (grupo de observación). Usando el criterio AIC y BIC comparamos ambos modelos originales y obtuvimos un mejor modelo utilizando la base de datos refinada. 
+
+Se usó la función stepAIC hacia atrás desde el modelo con las covariables obstruct, differ y node4 eliminadas (variables que no cumplen riesgos proporcionales) y el mejor modelo fue usando solamente rx, adhere, nodes, extent y surg. Los resultados se muestran en la siguiente tabla
+
+```{r}
+
+# Base de datos refinada (union de dos grupos de rx)
+
+data_ref <- data %>% mutate(
+    rx = recode(rx, "Obs" = "Obs/Lev", "Lev" = "Obs/Lev")
+  ) %>% na.omit() 
+
+# Modelo original con base refinada
+
+mod_og2 <- coxph(Surv(time, status == 1) ~ rx + sex + age + obstruct + perfor + adhere + nodes + differ + extent + surg + node4_, data = data_ref)
+
+#AIC(mod_og, mod_og2) = 5433.96, 5421.2 
+#BIC(mod_og, mod_og2) = 5483.92, 5478.09
+
+# La base de datos refinada mejora el ajuste del modelo
+
+# Modelo sin obstruct, differ y node4
+
+mod_a <- coxph(Surv(time, status == 1) ~ rx + sex + age + perfor + adhere + nodes + extent + surg, data = data_ref)
+
+#MASS::stepAIC(mod_og2, direction = c("backward"))
+# El modelo con el menor AIC es el siguiente
+             
+mod <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + extent + surg, data = data_ref)
+mod_fit <- summary(mod)
+
+## EXTRAEMOS COEFICIENTES E INTERVALOS DE CONFIANZA
+
+mod_coeffs <-  as.data.frame(mod_fit$coefficients) %>%
+  cbind(as.data.frame(mod_fit$conf.int[,-1]))
+  
+## Mostrar los coeficientes y su efecto (exp(coef))
+
+kable(
+  mod_coeffs %>% select(coef, `Pr(>|z|)`, `exp(coef)`, `lower .95`, `upper .95`),
+  digits = 4,
+  caption = "Coeficientes, IC 95% y su efecto"
+)
+
+```
+
+De los coeficientes significantes se registran los siguientes efectos al riesgo base.
+
+- rxLev+5FU: disminución de 27.41% (disminución porcentual de 3.82% respecto al modelo y base de datos original).
+- nodes: aumento de 9.38% por cada nódulo linfático adicional (aumento porcentual de 4.9% respecto al modelo original).
+- extentsubmucosa: disminución de 69.13%.
+- extentmuscle: disminución de 40.7% (aumento porcentual de 1.69% respecto al modelo original).
+- surglong: aumento de 28.58% (aumento porcentual de 2.16% respecto al modelo original).
+
+De los coeficientes no significantes se tienen los siguientes efectos al riesgo base. Los intervalos de confianza indican que es posible que se vea un efecto opuesto al estimado, esto debido a posible falta de observaciones de estas categorias.
+
+- adhere1: aumento de 24.81% (37 observaciones del total de 888).
+- extentcont.str: aumento de 44.63% (128 observaciones del total de 888)
+
+La significancia global indica una concordancia de 65.72% (disminución porcentual de 1.79% respecto al modelo original) indicando un ajuste modesto.
+
+```{r}
+## Extraccion de los pvalores de las pruebas globales
+
+kable(
+  data.frame(
+    Prueba = c("Wald", "Score", "Log"),
+    df = c(mod_fit$waldtest[2], mod_fit$sctest[2], mod_fit$logtest[2]),
+    p_valor = c(mod_fit$waldtest[3], mod_fit$sctest[3], mod_fit$logtest[3])
+  ),
+  digits = 4,
+  caption = "Pruebas de significancia global"
+)
+
+```
+
+Son rechazadas todas. El modelo es significante globalmente. Ahora se realiza análisis residual.
+
+**Cox-Snell y Martingala.** 
 
 ```{r}
 
@@ -110,6 +226,11 @@ ggplot(data=data_ref,aes(x=nodes,y=res_mart))+
   geom_point()+
   geom_smooth(method = "loess", se = T, span = 0.75)+
   labs(x='Nodes',y='Martingale residuals')
+```
+
+**Devianza.** 
+
+```{r}
 
 
 # Devianza
@@ -121,24 +242,28 @@ ggplot(data=data_ref,aes(x=id,y=res_dev))+
   geom_point()+
   geom_hline(yintercept=0,col='red')+
   labs(x="",y="Deviance residuals")
+```
 
+**Delta-betas y desplazamiento de la verosimilitud.** 
+
+```{r}
 # Delta-betas
 res_dbs = residuals(mod, type = "dfbetas")
 res_db = residuals(mod, type = "dfbeta")
 
 # number of observations (n) and covariates (k)
 n = nrow(data_ref)
-k = 5
+k = 7
 id = rep(1:n, k)
 
 vars = c(rep('rxLev+5FU',n),rep('adhere1',n),rep('nodes',n),
-         rep('nodes^2',n),rep('surglong',n))
+         rep('extentsubmucosa',n),rep('extentmuscle',n),rep('extentcont.str',n),rep('surglong',n))
 
 val_std = c(res_dbs[,1],res_dbs[,2],res_dbs[,3],
-            res_dbs[,4], res_dbs[,5])
+            res_dbs[,4], res_dbs[,5], res_dbs[,6], res_dbs[,7])
 
 val = c(res_db[,1],res_db[,2],res_db[,3],
-        res_db[,4], res_db[,5])
+        res_db[,4], res_db[,5],res_db[,6], res_db[,7])
 
 db_df=data.frame(x=id,y_std=val_std,y=val,name=vars)
 
@@ -163,12 +288,13 @@ ggplot(data=LD_df,aes(x=id,y=y))+
   geom_point()+
   labs(x="",y=expression(LD[i]))
 
-View(LD_df %>% filter(y>.05))
+```
 
+**Riesgos proporcionales.** 
+
+```{r}
 cox.zph(mod)
 
-View(db_df %>% filter(abs(y_std)>.15))
 ```
 
 ### 5. Ajuste de una regresión paramétrica.
-
