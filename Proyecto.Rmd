@@ -22,7 +22,7 @@ library(dplyr)
 
 ```
 
-## Análisis descriptivo
+## 1. Análisis descriptivo
 
 ```{r}
 
@@ -46,19 +46,37 @@ data <- data %>%
 
 ```
 
-### Ajuste de un modelo de Cox
+
+
+
+
+### 4. Ajuste de un modelo de Cox.
+
+
 
 ```{r}
 
 data_ref <- data %>% mutate(
     rx = recode(rx, "Obs" = "Obs/Lev", "Lev" = "Obs/Lev") 
-  ) %>% 
-  dplyr::select(id, time, status, rx, adhere, nodes, surg) %>% na.omit() 
+  ) %>% na.omit() 
 
-# Base de datos refinada (union de varias categorias debido a frecuencias bajas)
+data <- na.omit(data)
 
-mod <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + I(nodes^2) + surg, data = data_ref)
+# Base de datos refinada (union de dos grupos de rx, ua que uno de ellos no era singificante
+
+# Modelo con todas las covariables
+
+mod_og <- coxph(Surv(time, status == 1) ~ rx + sex + age + obstruct + perfor + adhere + nodes + differ + extent + surg + node4, data = data)
+
+kable(
+  (summary(mod_og))$coefficients,
+  digits = 4,
+  caption = "Coeficientes del modelo con todas las covariables"
+)
+                
+mod <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + surg, data = data_ref)
 summary(mod)
+
 
 ```
 
@@ -152,12 +170,6 @@ cox.zph(mod)
 View(db_df %>% filter(abs(y_std)>.15))
 ```
 
-```{r}
-data_ref$Psi <- exp(
-  predict(mod, newdata = data_ref,
-          type = "lp", reference = "zero")
-)
+### 5. Ajuste de una regresión paramétrica.
 
-ggplot(data_ref, aes(x = Psi, fill = rx)) + geom_histogram()
-```
 
