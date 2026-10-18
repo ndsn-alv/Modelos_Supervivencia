@@ -19,11 +19,12 @@ library(ggplot2)
 library(survival)
 library(survminer)
 library(dplyr)
+library(flexsurv)
 library(knitr)
 
 ```
 
-## 1. Análisis descriptivo
+## 0. Análisis descriptivo
 
 ```{r}
 
@@ -44,6 +45,88 @@ data <- data %>%
     node4_ = factor(node4, levels = c(0,1))
   ) %>% 
   dplyr::select(-study, -etype, -node4) %>% na.omit()
+```
+
+
+```{r}
+dat_all <- data   # los 929 pacientes, antes del na.omit de la sección de Cox
+```
+
+## 1. Modelo paramétrico para el tiempo de supervivencia
+
+Ajustamos a los 929 pacientes, sin covariables, seis distribuciones: exponencial, Weibull, log-normal, log-logística, Gompertz y gamma generalizada (que contiene a varias de las anteriores como casos particulares).
+
+```{r ajuste}
+dists <- c("exp", "weibull", "lnorm", "llogis", "gompertz", "gengamma")
+ajustes <- lapply(dists, function(k)
+  flexsurvreg(Surv(time, status) ~ 1, data = dat_all, dist = k))
+names(ajustes) <- dists
+
+tab_aic <- data.frame(
+  Distribución = c("Exponencial", "Weibull", "Log-normal", "Log-logística",
+                   "Gompertz", "Gamma generalizada"),
+  Parámetros = sapply(ajustes, function(f) f$npars),
+  AIC = sapply(ajustes, AIC),
+  BIC = sapply(ajustes, BIC)
+)
+rownames(tab_aic) <- dists
+tab_aic$dAIC <- tab_aic$AIC - min(tab_aic$AIC)
+tab_aic$dBIC <- tab_aic$BIC - min(tab_aic$BIC)
+
+fl <- ajustes$lnorm; fg <- ajustes$gengamma; fw <- ajustes$weibull
+lrt <- 2 * (fg$loglik - fl$loglik)
+p_lrt <- pchisq(lrt, df = 1, lower.tail = FALSE)
+
+kable(tab_aic, digits = 1, row.names = FALSE,
+      caption = "Comparación de distribuciones (dAIC y dBIC: diferencia contra la mejor)")
+```
+
+**Elección de la distribución.** Comparamos con AIC y BIC (menor es mejor; el BIC penaliza más los parámetros extra). El AIC favorece moderadamente a la gamma generalizada (la log-normal queda a `r round(tab_aic["lnorm","dAIC"],1)` puntos), mientras que el BIC las considera casi equivalentes (diferencia de `r round(tab_aic["gengamma","dBIC"],1)`, a favor de la log-normal). Las demás distribuciones quedan a más de 20 puntos de AIC.
+
+La Weibull estima una forma de `r round(fw$res["shape","est"],2)`, es decir, se reduce a la exponencial (riesgo constante); las distribuciones que permiten que el riesgo crezca y luego baje (log-normal, gamma generalizada, log-logística) ajustan mejor que las que no. La prueba de razón de verosimilitud contra la gamma generalizada rechaza la log-normal al 5% (p = `r round(p_lrt,3)`), aunque no al 1%, y la mejora es modesta. Elegimos la log-normal por ser más simple y porque su versión con covariables (punto 4) se interpreta de forma directa. Reconocemos que ningún modelo paramétrico reproduce exactamente a Kaplan-Meier.
+
+**Elección de la distribución.** Utilizamos criterios de información AIC y BIC, acompañados de las características del riesgo y de la prueba de verosimilitud.
+
+En términos de AIC, el modelo ganador es la gamma generalizada, quedándose cerca la distribución log-normal (`r round(tab_aic["lnorm","dAIC"],1)` puntos), por otro lado, en términos de BIC (el cual penaliza más los parámetros extra), se favorece a la distribución log-normal, considerando casi equivalente a la distribución gamma generalizada (diferencia de `r round(tab_aic["gengamma","dBIC"],1)`, a favor de la log-normal). El resto de distribuciones se aleja por varios puntos. Así, en términos de AIC y BIC las distribuciones favoritas son log-normal y gamma generalizada.
+
+Al analizar las características del riesgo, notamos que la Weibull estima un parámetro de forma de `r round(fw$res["shape","est"],2)`, es decir, se reduce a la exponencial (riesgo constante); sin embargo, las distribuciones que permiten que el riesgo crezca y luego baje (log-normal, gamma generalizada, log-logística) ajustan mejor que las que no.
+
+La prueba de razón de verosimilitud contra la gamma generalizada rechaza la log-normal al 5% (p = `r round(p_lrt,3)`), aunque no al 1%, sin embargo, la mejoría es modesta. Por lo tanto, elegimos la distribución log-normal por explicar bien el riesgo, ajustar adecuadamente a los datos y ser más simple, así mismo, su versión con covariables se interpreta de forma directa.
+
+Finalmente, es importante reconocer que ningún modelo paramétrico termina por reproducir exactamente la estimación con Kaplan Meier.
+
+```{r emv}
+r <- fl$res[c("meanlog", "sdlog"), c("est", "L95%", "U95%")]
+med <- exp(fl$res["meanlog", c("est", "L95%", "U95%")])
+tab_emv <- rbind(r, med)
+rownames(tab_emv) <- c("meanlog", "sdlog", "Mediana (días)")
+colnames(tab_emv) <- c("Estimador", "IC inf. 95%", "IC sup. 95%")
+kable(tab_emv, digits = 2,
+      caption = "Log-normal: estimadores de máxima verosimilitud y mediana")
+```
+
+```{r figura, fig.width=7, fig.height=3.2, fig.align="center"}
+set.seed(123)   # los IC por simulación dependen de la semilla
+tt <- seq(10, 3300, length.out = 200)
+S <- summary(fl, t = tt, type = "survival", ci = TRUE, B = 1000)[[1]]
+H <- summary(fl, t = tt, type = "hazard",   ci = TRUE, B = 1000)[[1]]
+km <- survfit(Surv(time, status) ~ 1, data = dat_all)
+km_df <- rbind(data.frame(time = 0, surv = 1),
+               data.frame(time = km$time, surv = km$surv))
+
+g1 <- ggplot() +
+  geom_ribbon(data = S, aes(time, ymin = lcl, ymax = ucl), fill = "steelblue", alpha = .25) +
+  geom_line(data = S, aes(time, est), colour = "steelblue", linewidth = 1) +
+  geom_step(data = km_df, aes(time, surv)) +
+  labs(x = "Días", y = "S(t)", title = "Supervivencia",
+       subtitle = "Negro: Kaplan-Meier. Azul: log-normal con IC 95%") +
+  ylim(0, 1)
+g2 <- ggplot(H, aes(time, est)) +
+  geom_ribbon(aes(ymin = lcl, ymax = ucl), fill = "steelblue", alpha = .25) +
+  geom_line(colour = "steelblue", linewidth = 1) +
+  labs(x = "Días", y = "h(t)", title = "Riesgo (log-normal)",
+       subtitle = "Banda: IC 95%")
+ggpubr::ggarrange(g1, g2, ncol = 2)
 ```
 
 ### 4. Ajuste de un modelo de Cox. Se ajusta un modelo de riesgos proporcionales usando todas las covariables de la base datos. Obtenemos 15 parámetros de las cuales individualmente solo 6 son significativos. 
@@ -297,4 +380,3 @@ cox.zph(mod)
 
 ```
 
-### 5. Ajuste de una regresión paramétrica.
