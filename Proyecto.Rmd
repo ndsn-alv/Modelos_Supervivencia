@@ -24,7 +24,7 @@ library(knitr)
 
 ```
 
-## 0. Análisis descriptivo
+### Análisis descriptivo
 
 ```{r}
 
@@ -44,17 +44,21 @@ data <- data %>%
     surg = factor(surg, levels = c(0,1), labels = c("short", "long")),
     node4_ = factor(node4, levels = c(0,1))
   ) %>% 
-  dplyr::select(-study, -etype, -node4) %>% na.omit()
+  dplyr::select(-study, -etype, -node4)
+
+dat_all <- survival::colon %>% filter(etype == 2)   # trabajamos con los datos completos
 ```
 
-
-```{r}
-dat_all <- data   # los 929 pacientes, antes del na.omit de la sección de Cox
+```{r verif-muestra, include=FALSE}
+# Los puntos 1 y 2 usan los 929 pacientes (sin covariables no hay razón para
+# descartar a nadie). Los puntos 3 y 4 usan solo casos completos en covariables.
+stopifnot(nrow(dat_all) == 929, sum(dat_all$status) == 452)
+nrow(dat_all) - nrow(data)   # pacientes excluidos solo en Cox: 41
 ```
 
-## 1. Modelo paramétrico para el tiempo de supervivencia
+### 1. Modelo paramétrico para el tiempo de supervivencia
 
-Ajustamos a los 929 pacientes, sin covariables, seis distribuciones: exponencial, Weibull, log-normal, log-logística, Gompertz y gamma generalizada (que contiene a varias de las anteriores como casos particulares).
+Ajustamos a los `r nrow(dat_all)` pacientes, sin covariables, seis distribuciones: exponencial, Weibull, log-normal, log-logística, Gompertz y gamma generalizada (que contiene a varias de las anteriores como casos particulares).
 
 ```{r ajuste}
 dists <- c("exp", "weibull", "lnorm", "llogis", "gompertz", "gengamma")
@@ -81,19 +85,15 @@ kable(tab_aic, digits = 1, row.names = FALSE,
       caption = "Comparación de distribuciones (dAIC y dBIC: diferencia contra la mejor)")
 ```
 
-**Elección de la distribución.** Comparamos con AIC y BIC (menor es mejor; el BIC penaliza más los parámetros extra). El AIC favorece moderadamente a la gamma generalizada (la log-normal queda a `r round(tab_aic["lnorm","dAIC"],1)` puntos), mientras que el BIC las considera casi equivalentes (diferencia de `r round(tab_aic["gengamma","dBIC"],1)`, a favor de la log-normal). Las demás distribuciones quedan a más de 20 puntos de AIC.
-
-La Weibull estima una forma de `r round(fw$res["shape","est"],2)`, es decir, se reduce a la exponencial (riesgo constante); las distribuciones que permiten que el riesgo crezca y luego baje (log-normal, gamma generalizada, log-logística) ajustan mejor que las que no. La prueba de razón de verosimilitud contra la gamma generalizada rechaza la log-normal al 5% (p = `r round(p_lrt,3)`), aunque no al 1%, y la mejora es modesta. Elegimos la log-normal por ser más simple y porque su versión con covariables (punto 4) se interpreta de forma directa. Reconocemos que ningún modelo paramétrico reproduce exactamente a Kaplan-Meier.
-
 **Elección de la distribución.** Utilizamos criterios de información AIC y BIC, acompañados de las características del riesgo y de la prueba de verosimilitud.
 
-En términos de AIC, el modelo ganador es la gamma generalizada, quedándose cerca la distribución log-normal (`r round(tab_aic["lnorm","dAIC"],1)` puntos), por otro lado, en términos de BIC (el cual penaliza más los parámetros extra), se favorece a la distribución log-normal, considerando casi equivalente a la distribución gamma generalizada (diferencia de `r round(tab_aic["gengamma","dBIC"],1)`, a favor de la log-normal). El resto de distribuciones se aleja por varios puntos. Así, en términos de AIC y BIC las distribuciones favoritas son log-normal y gamma generalizada.
+En términos de AIC, el modelo ganador es la gamma generalizada, quedándose a `r round(tab_aic["lnorm","dAIC"],1)` puntos la distribución log-normal, por otro lado, en términos de BIC (el cual penaliza más los parámetros extra), se favorece a la distribución log-normal, considerando casi equivalente a la distribución gamma generalizada (diferencia de `r round(tab_aic["gengamma","dBIC"],1)`, a favor de la log-normal). El resto de distribuciones queda a más de 20 puntos de AIC (de hecho, la exponencial, la más simple, pierde por `r round(tab_aic["exp","dAIC"])` respecto a la mejor), así que se descartan.
 
-Al analizar las características del riesgo, notamos que la Weibull estima un parámetro de forma de `r round(fw$res["shape","est"],2)`, es decir, se reduce a la exponencial (riesgo constante); sin embargo, las distribuciones que permiten que el riesgo crezca y luego baje (log-normal, gamma generalizada, log-logística) ajustan mejor que las que no.
+Al analizar las características del riesgo, notamos que la Weibull estima un parámetro de forma de `r round(fw$res["shape","est"],3)` (IC 95%: `r round(fw$res["shape","L95%"],3)` a `r round(fw$res["shape","U95%"],3)`), es decir, se reduce a la exponencial (riesgo constante), ya que solo permite riesgo creciente, decreciente o constante; sin embargo, los datos parecen favorecer distribuciones que permitan que el riesgo crezca y luego baje (log-normal, gamma generalizada, log-logística).
 
-La prueba de razón de verosimilitud contra la gamma generalizada rechaza la log-normal al 5% (p = `r round(p_lrt,3)`), aunque no al 1%, sin embargo, la mejoría es modesta. Por lo tanto, elegimos la distribución log-normal por explicar bien el riesgo, ajustar adecuadamente a los datos y ser más simple, así mismo, su versión con covariables se interpreta de forma directa.
+La prueba de razón de verosimilitud contra la gamma generalizada rechaza la log-normal al 5% (p = `r round(p_lrt,3)`), aunque no al 1%, sin embargo, la mejoría (al usar la gamma generalizada) es modesta. Por lo tanto, elegimos la distribución log-normal porque ajusta razonablemente a los datos, es más simple que una distribución gamma generalizada y, la distribución log normal con covariables se interpreta como un modelo de tiempo de vida acelerado, donde las covariables multiplican el tiempo de supervivencia.
 
-Finalmente, es importante reconocer que ningún modelo paramétrico termina por reproducir exactamente la estimación con Kaplan Meier.
+Finalmente, debemos reconocer que ningún modelo paramétrico termina por reproducir exactamente la estimación con Kaplan Meier.
 
 ```{r emv}
 r <- fl$res[c("meanlog", "sdlog"), c("est", "L95%", "U95%")]
@@ -101,12 +101,13 @@ med <- exp(fl$res["meanlog", c("est", "L95%", "U95%")])
 tab_emv <- rbind(r, med)
 rownames(tab_emv) <- c("meanlog", "sdlog", "Mediana (días)")
 colnames(tab_emv) <- c("Estimador", "IC inf. 95%", "IC sup. 95%")
-kable(tab_emv, digits = 2,
-      caption = "Log-normal: estimadores de máxima verosimilitud y mediana")
+tab_f <- apply(tab_emv, 2, function(x) c(sprintf("%.2f", x[1:2]), sprintf("%.0f", x[3])))
+rownames(tab_f) <- rownames(tab_emv)
+kable(tab_f, align = "rrr", caption = "Log-normal: estimadores de máxima verosimilitud y mediana")
 ```
 
-```{r figura, fig.width=7, fig.height=3.2, fig.align="center"}
-set.seed(123)   # los IC por simulación dependen de la semilla
+```{r figura, fig.width=7, fig.height=3.2, fig.align="center", fig.cap="Supervivencia y riesgo estimados (log-normal). Banda: IC 95% por simulación."}
+set.seed(2026)
 tt <- seq(10, 3300, length.out = 200)
 S <- summary(fl, t = tt, type = "survival", ci = TRUE, B = 1000)[[1]]
 H <- summary(fl, t = tt, type = "hazard",   ci = TRUE, B = 1000)[[1]]
@@ -119,19 +120,55 @@ g1 <- ggplot() +
   geom_line(data = S, aes(time, est), colour = "steelblue", linewidth = 1) +
   geom_step(data = km_df, aes(time, surv)) +
   labs(x = "Días", y = "S(t)", title = "Supervivencia",
-       subtitle = "Negro: Kaplan-Meier. Azul: log-normal con IC 95%") +
-  ylim(0, 1)
+       subtitle = "Negro: Kaplan-Meier. Azul: log-normal") +
+  ylim(0, 1) +
+  theme_bw()
 g2 <- ggplot(H, aes(time, est)) +
   geom_ribbon(aes(ymin = lcl, ymax = ucl), fill = "steelblue", alpha = .25) +
   geom_line(colour = "steelblue", linewidth = 1) +
   labs(x = "Días", y = "h(t)", title = "Riesgo (log-normal)",
-       subtitle = "Banda: IC 95%")
+       subtitle = "Banda: IC 95%") +
+  theme_bw()
 ggpubr::ggarrange(g1, g2, ncol = 2)
 ```
 
-### 4. Ajuste de un modelo de Cox. Se ajusta un modelo de riesgos proporcionales usando todas las covariables de la base datos. Obtenemos 15 parámetros de las cuales individualmente solo 6 son significativos. 
+```{r}
+t_pico <- H$time[which.max(H$est)]
+```
 
-**Razones de riesgo (HR).** Las HR de las covariables categóricas indican que si el individuo se encuentra en uno de los siguientes grupos su riesgo aumenta o disminuye respecto al grupo base a una proporción $\exp(\beta)$. 
+```{r verif-distribucion, include=FALSE}
+# (1) Weibull: forma aprox 1 con IC que incluye al 1 -> equivale a la exponencial
+fw$res["shape", c("est", "L95%", "U95%")]
+
+# (2) Gamma generalizada: Q = 0 es log-normal, Q = 1 es Weibull
+fg$res["Q", c("est", "L95%", "U95%")]
+c(LRT = lrt, p = p_lrt)   # rechaza Q = 0 al 5%, no al 1%
+
+# (3) KM vs log-normal en tiempos clave (IC de KM en escala log-log)
+tk <- c(500, 1000, 1500, 2000, 2500, 3000)
+km_ll <- survfit(Surv(time, status) ~ 1, data = dat_all, conf.type = "log-log")
+sk <- summary(km_ll, times = tk)
+set.seed(2026)
+Sk <- summary(fl, t = tk, type = "survival", ci = TRUE, B = 1000)[[1]]
+comp <- data.frame(t = tk, KM = sk$surv, KM_l = sk$lower, KM_u = sk$upper,
+                   LN = Sk$est, LN_l = Sk$lcl, LN_u = Sk$ucl)
+comp$KM_dentro_banda_LN <- comp$KM >= comp$LN_l & comp$KM <= comp$LN_u
+comp
+# (4) Mediana de KM contra la paramétrica
+summary(km_ll)$table[c("median", "0.95LCL", "0.95UCL")]
+```
+
+**Resultados.** `meanlog` y `sdlog` son la media y la desviación estándar del logaritmo del tiempo de supervivencia; un `sdlog` de `r round(fl$res["sdlog","est"],2)` indica tiempos muy dispersos. La mediana estimada es `r round(med["est"])` días (aprox. `r round(med["est"]/365.25,1)` años), con IC 95% de `r round(med["L95%"])` a `r round(med["U95%"])`; este intervalo sale de transformar el de `meanlog`, porque la mediana es exp(meanlog).
+
+El riesgo estimado sube rápido, alcanza su máximo cerca de los `r round(t_pico)` días (aprox. `r round(t_pico/365.25,1)` años) y después baja lentamente. La banda es ancha cerca del día 0 porque probablemente hay pocos eventos tempranos, y no hay datos después de \~3300 días, así que no debe extrapolarse la caída. Los IC de S(t) y h(t) se obtuvieron por simulación (1000 réplicas, semilla fija).
+
+La curva de Kaplan-Meier queda cerca de la log-normal, con una desviación moderada entre \~800 y \~1500 días, donde la log-normal sobrestima la supervivencia hasta unos 0.04.
+
+### 4. Ajuste de un modelo de Cox. 
+
+Se ajusta un modelo de riesgos proporcionales usando todas las covariables de la base datos. Obtenemos 15 parámetros de las cuales individualmente solo 6 son significativos.
+
+**Razones de riesgo (HR).** Las HR de las covariables categóricas indican que si el individuo se encuentra en uno de los siguientes grupos su riesgo aumenta o disminuye respecto al grupo base a una proporción $\exp(\beta)$.
 
 $$
 \frac{h_j(t; \text{Grupo} = 1)}{h_i(t; \text{Grupo} = 0)} = e^{\beta_\text{Grupo}}
@@ -147,6 +184,11 @@ $$
 
 ```{r}
 ## MODELO ORGINAL - Todas las covariables
+
+data <- data %>% na.omit()
+data <- data %>% mutate(
+  id = seq(1,nrow(data),1)
+)
 
 mod_og <- coxph(Surv(time, status == 1) ~ rx + sex + age + obstruct + perfor + adhere + nodes + differ + extent + surg + node4_, data = data)
 
@@ -177,9 +219,9 @@ De los coeficientes significantes se registran los siguientes efectos (aumentos 
 
 Tenemos muchos coeficientes que no son significativos y su presencia puede afectar de manera general al ajuste asi como causar el incumplimiento del supuesto de riesgos proporcionales. Sin embargo, variables como extentsubmucosa, extentcont.str y age siguen cuasando cierto efecto que vale la pena investigar. Esto es en especial notorio por los intervalos de confianza que aunque incluyen al cero mantiene un efecto contrario al estimado relativamente leve (depende de la variable).
 
-El resto de variables aportan un efecto confuso y se debe realiza una selección de variables con cuidado. 
+El resto de variables aportan un efecto confuso y se debe realiza una selección de variables con cuidado.
 
-**Significancia global.** Según las pruebas de Wald, Score y Log-rank se asume la hipótesis nula de coeficientes nulos en todo el modelo, por lo que al rechazar la hipótesis se tiene que al menos una covariable es significativa para el modelo global. Los resultados de las pruebas se muestran en la siguiente tabla. 
+**Significancia global.** Según las pruebas de Wald, Score y Log se asume la hipótesis nula de coeficientes nulos en todo el modelo, por lo que al rechazar la hipótesis se tiene que al menos una covariable es significativa para el modelo global. Los resultados de las pruebas se muestran en la siguiente tabla.
 
 ```{r}
 
@@ -201,9 +243,9 @@ Son rechazadas todas las pruebas, el modelo es significativo globalmente. Se obs
 
 **Selección de variables.** Realizando una prueba de ZPH en el modelo con todas las covariables se verificó que solamente tres variables no cumplen el supuesto de riesgos proporcionales individualmente (obstruct, differ, node4). Estas afectan al modelo global y es mejor eliminarlas (incluso si algunas son significantes).
 
-Otro cambio que se realizó fue en la base directamente al unir rxLev y rxObs con el objetivo de refinar el modelo ligeramente. Esta decisión surgió ya que al grupo al que se le aplicó levamisol (un fármaco utilizado contra gusanos parásitos) no es significante contra el riesgo base (grupo de observación). Usando el criterio AIC y BIC comparamos ambos modelos originales y obtuvimos un mejor modelo utilizando la base de datos refinada. 
+Otro cambio que se realizó fue en la base directamente al unir rxLev y rxObs con el objetivo de refinar el modelo ligeramente. Esta decisión surgió ya que al grupo al que se le aplicó levamisol (un fármaco utilizado contra gusanos parásitos) no es significante contra el riesgo base (grupo de observación). Usando el criterio AIC y BIC comparamos ambos modelos originales y obtuvimos un mejor modelo utilizando la base de datos refinada.
 
-Se usó la función stepAIC hacia atrás desde el modelo con las covariables obstruct, differ y node4 eliminadas (variables que no cumplen riesgos proporcionales) y el mejor modelo fue usando solamente rx, adhere, nodes, extent y surg. Los resultados se muestran en la siguiente tabla
+Se usó la función stepAIC hacia atrás desde el modelo con las covariables obstruct, differ y node4 eliminadas (variables que no cumplen riesgos proporcionales) y el mejor modelo fue usando solamente rx, adhere, nodes, extent y surg (AIC: ). Los coeficientes se muestran en la siguiente tabla
 
 ```{r}
 
@@ -213,24 +255,38 @@ data_ref <- data %>% mutate(
     rx = recode(rx, "Obs" = "Obs/Lev", "Lev" = "Obs/Lev")
   ) %>% na.omit() 
 
+data_ref <- data_ref %>% mutate(id = seq(1,nrow(data_ref), 1))
+
 # Modelo original con base refinada
 
 mod_og2 <- coxph(Surv(time, status == 1) ~ rx + sex + age + obstruct + perfor + adhere + nodes + differ + extent + surg + node4_, data = data_ref)
 
-#AIC(mod_og, mod_og2) = 5433.96, 5421.2 
-#BIC(mod_og, mod_og2) = 5483.92, 5478.09
+#AIC(mod_og, mod_og2) ##5422.96, 5421.2 
+#BIC(mod_og, mod_og2) ##5483.92, 5478.09
 
 # La base de datos refinada mejora el ajuste del modelo
 
 # Modelo sin obstruct, differ y node4
 
 mod_a <- coxph(Surv(time, status == 1) ~ rx + sex + age + perfor + adhere + nodes + extent + surg, data = data_ref)
+#AIC=5443.83
 
-#MASS::stepAIC(mod_og2, direction = c("backward"))
-# El modelo con el menor AIC es el siguiente
-             
-mod <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + extent + surg, data = data_ref)
+#MASS::stepAIC(mod_a, direction = c("backward"))
+#AIC5439.9
+
+## Modelo usando StepAIC
+mod_alt <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + extent + surg, data = data_ref)
+
+## Mismo modelo usadno termino cuadratico en nodes
+
+mod <- coxph(Surv(time, status == 1) ~ rx + adhere + nodes + I(nodes^2) + I(nodes^3) + extent + surg, data = data_ref)
+
 mod_fit <- summary(mod)
+
+#AIC(mod, mod_alt) ##5420.33, 5439.87
+#BIC(mod, mod_alt) ##5456.91, 5468.325
+
+# El modelo con termino cuadratico es mejor
 
 ## EXTRAEMOS COEFICIENTES E INTERVALOS DE CONFIANZA
 
@@ -249,18 +305,25 @@ kable(
 
 De los coeficientes significantes se registran los siguientes efectos al riesgo base.
 
-- rxLev+5FU: disminución de 27.41% (disminución porcentual de 3.82% respecto al modelo y base de datos original).
-- nodes: aumento de 9.38% por cada nódulo linfático adicional (aumento porcentual de 4.9% respecto al modelo original).
-- extentsubmucosa: disminución de 69.13%.
-- extentmuscle: disminución de 40.7% (aumento porcentual de 1.69% respecto al modelo original).
-- surglong: aumento de 28.58% (aumento porcentual de 2.16% respecto al modelo original).
+- rxLev+5FU: disminución de 27.94%.
+- extentmuscle: disminución de 36.89%.
+- surglong: aumento de 28.58%.
 
-De los coeficientes no significantes se tienen los siguientes efectos al riesgo base. Los intervalos de confianza indican que es posible que se vea un efecto opuesto al estimado, esto debido a posible falta de observaciones de estas categorias.
+En el caso de nodes en el que tenemos un polinomio de grado 3. Ocurrirá que la razón de riesgo por cada nódulo adicional dependerá de la misma variable. Es decir
 
-- adhere1: aumento de 24.81% (37 observaciones del total de 888).
-- extentcont.str: aumento de 44.63% (128 observaciones del total de 888)
+$$
+\frac{h_j(t; \text{nodes} = X + 1)}{h_i(t; \text{nodes} = X)} = \exp({\beta_3 + \beta_4(2X + 1) +  \beta_5(3X^2 + 3X + 1}))
+$$
 
-La significancia global indica una concordancia de 65.72% (disminución porcentual de 1.79% respecto al modelo original) indicando un ajuste modesto.
+En general, el polinomio cúbico nos ayuda a controlar valores extremos en los nódulos (se tiene un máximo de 33 nódulos) ya que el 79.4% de los datos tiene no mas de 5 nódulos. Esto es notorio debido al valor negativo pequeño en el término cuadrado y un valor muy cercano a cero en el término cúbico (no es significante como tal pero su efecto no es menor a 1).
+
+De los coeficientes no significantes se tienen los siguientes efectos al riesgo base. Los intervalos de confianza indican que es posible que se vea un efecto opuesto al estimado, esto debido a posible falta de observaciones de estas categorías.
+
+- adhere1: aumento de 27.21% (37 observaciones del total de 888).
+- extentsubmucosa: disminución de 65.56% (19 observaciones del total de 888).
+- extentcont.str: aumento de 48.14% (128 observaciones del total de 888)
+
+La significancia global indica una concordancia de 66.5% indicando un ajuste modesto.
 
 ```{r}
 ## Extraccion de los pvalores de las pruebas globales
@@ -279,9 +342,9 @@ kable(
 
 Son rechazadas todas. El modelo es significante globalmente. Ahora se realiza análisis residual.
 
-**Cox-Snell y Martingala.** 
+**Cox-Snell y Martingala.** Se extraen los residuos martingala utilizados para calcular los residuos Cox-Snell. La primera gráfica utiliza el ajuste de supervivencia por Kaplan-Meier tomando los residuos Cox-Snell como los tiempos. Se grafica el riesgo acumulado vs. el tiempo y se verifica si los puntos se ajustan a la recta. La segunda grafica los residuos martingala vs. nódulos. Se usa para verificar la linealidad de la variable numérica (Durante el proceso de selección de variables se visualizaba una curva cúbica en esta gráfica, por lo que se consideró necesario usar un polinomio cúbico).
 
-```{r}
+```{r fig.width=6, fig.height=3}
 
 # Cox - Snell 
 res_mart = residuals(mod,type='martingale')
@@ -294,40 +357,79 @@ fit_cs = survfit(Surv(res_cs, status == 1) ~ 1, data = data_ref)
 # Plot cumulative hazard
 df = data.frame(x=fit_cs$time,y=-log(fit_cs$surv))
 
-ggplot(data=df,aes(x=x,y=y))+
-  geom_line(col='darkgrey')+
-  geom_point(size=.5)+
-  labs(x="Cox-Snell residuals",y=expression(hat(H[t])))+
-  geom_abline(intercept=0,slope=1,col="red")
-
 # Martingala
 
 # Martingale residuals vs continuous variables
 data_ref$res_mart = res_mart
 
-ggplot(data=data_ref,aes(x=nodes,y=res_mart))+
-  geom_point()+
-  geom_smooth(method = "loess", se = T, span = 0.75)+
-  labs(x='Nodes',y='Martingale residuals')
+#Graficas
+
+wrap_plots(
+  ggplot(data=df,aes(x=x,y=y))+
+  geom_line(col='darkgrey')+
+  geom_point(size=.5)+
+  labs(x="Cox-Snell",y=expression(hat(H[t])), title = "Diagnóstico global")+
+  geom_abline(intercept=0,slope=1,col="red"),
+  ggplot(data=data_ref,aes(x=nodes,y=res_mart,colour =status))+
+    geom_point(size = .5)+
+    geom_smooth(method = "loess", se = T, span = 0.75)+
+    labs(x='Nodes',y='Martingala', title = "Diagnóstico de linealidad"),
+  ncol = 2
+)
+  
 ```
 
-**Devianza.** 
+En la primera gráfica parece que los puntos se ajustan bien a la recta al inicio, comforme nos acercamos a los últimos puntos, estos empiezan a desviarse de la recta fuertemente. Esto señala falta de ajuste ante valores altos, pero la cola suele tener pocos pacientes y muchas censuras. Asi que por si sola no basta para concluir un modelo mal ajustado.
 
-```{r}
+La segunda gráfica nos muestra que el polinomio cúbico mantiene la recta loess aproximadamente constante y cerca de cero. No es necesaria una tranformación adicional a esta variable. 
 
+**Devianza.** Se usa para medir posibles valores atípicos. Se hace extrayendo los residuales de devianza y graficarlos contra los individuos (id) y contra el tiempo. Valores altos de devianza en algún individuo que este puede ser un outlier. Las gráficas se ven de la siguiente manera 
+
+```{r fig.width=9, fig.height=4}
 
 # Devianza
 
 res_dev = residuals(mod,type='deviance')
 data_ref$res_dev = res_dev
 
-ggplot(data=data_ref,aes(x=id,y=res_dev))+
-  geom_point()+
+data_ref2 <- data_ref %>% mutate(status = factor(status))
+
+wrap_plots(
+  ggplot(data=data_ref,aes(x=id,y=res_dev, colour = status))+
+  geom_point(size = .5)+
   geom_hline(yintercept=0,col='red')+
-  labs(x="",y="Deviance residuals")
+  labs(x="Individuos",y="Devianza"),
+  ggplot(data=data_ref,aes(x=time,y=res_dev, colour = status))+
+  geom_point(size = .5)+
+  geom_hline(yintercept=0,col='red')+
+  labs(x="Tiempo",y="Devianza"),
+  ggplot(data_ref2, aes(x = status, y = time, colour = status)) +
+  geom_boxplot(),
+  ncol = 3
+)
+
 ```
 
-**Delta-betas y desplazamiento de la verosimilitud.** 
+Vemos que todas las censuras tienen devianza negativa y la mayoría de las muertes tiene devianza positiva. Para este modelo se puede apreciar que los individuos que murieron en los primeros dias del estudio tienen una mayor devianza. Vale la pena estudiar el comportamiento.
+
+Una fuerte sospecha sobre este comportamiento es debido a la naturaleza directa con las censuras mismas. Se incluye un diagrama boxplot que indica la distribución del tiempo para muertes y censuras en el cual se observa que el 82.6% de las muertes ocurren antes de 1500 días mientras que el 99.1% de las censuras ocurren despues de 1500 días. Esta disparidad podría generar este tipo de problemas.
+
+Esto hace que las observaciones con devianzas fuertes sean los individuos que murieron al inicio del estudio lo cual nos dificulta interpretar si en realidad son outliers o resultado de la naturaleza de los datos en cuestion de la censura.
+
+```{r}
+
+## Individuos con alta devianza, en su totalidad nos encontramos puras muertes a tiempos pequeños
+outliers <- data_ref %>% filter(abs(res_dev) > 2.5)
+
+kable(
+  outliers %>% select(id, time, status, rx, adhere, nodes, extent, surg),
+  caption = "Individuos con devianza alta"
+)
+```
+
+Todos los individuos tienen tiempos de muerte pequeños como se esperaba que ocurriera en la gráfica (la mediana del tiempo de muerte es de 774.5). También es notable el hecho de que todos pertenecen a extend_serosa (grupo base en extend). 
+
+**Delta-betas y desplazamiento de la verosimilitud.** Estos residuales se usan para verificar valores influyentes en el modelo. Las delta-betas se usan para verificar que pacientes afectan fuertemente a la estimación del coeficiente de alguna covariable en especifico. El desplazamiento de la verosimilitud describe que pacientes afectan fuertemente al modelo en general.
 
 ```{r}
 # Delta-betas
@@ -336,24 +438,19 @@ res_db = residuals(mod, type = "dfbeta")
 
 # number of observations (n) and covariates (k)
 n = nrow(data_ref)
-k = 7
+k = 9
 id = rep(1:n, k)
 
-vars = c(rep('rxLev+5FU',n),rep('adhere1',n),rep('nodes',n),
+vars = c(rep('rxLev+5FU',n),rep('adhere1',n),rep('nodes',n),rep('nodes^2',n),rep('nodes^3',n),
          rep('extentsubmucosa',n),rep('extentmuscle',n),rep('extentcont.str',n),rep('surglong',n))
 
 val_std = c(res_dbs[,1],res_dbs[,2],res_dbs[,3],
-            res_dbs[,4], res_dbs[,5], res_dbs[,6], res_dbs[,7])
+            res_dbs[,4], res_dbs[,5], res_dbs[,6], res_dbs[,7],res_dbs[,8], res_dbs[,9])
 
 val = c(res_db[,1],res_db[,2],res_db[,3],
-        res_db[,4], res_db[,5],res_db[,6], res_db[,7])
+        res_db[,4], res_db[,5],res_db[,6], res_db[,7],res_db[,8], res_db[,9])
 
 db_df=data.frame(x=id,y_std=val_std,y=val,name=vars)
-
-ggplot(data=db_df,aes(x=x,y=y_std,col=name))+
-  geom_line()+
-  labs(x='',y=expression(Delta[i]*beta[j]),
-       color = "Covariate")
 
 # Likelihood displacement
 LD = numeric(n)
@@ -367,16 +464,21 @@ for(i in 1:n){
 id = c(1:n)
 LD_df = data.frame(x=id,y=LD)
 
-ggplot(data=LD_df,aes(x=id,y=y))+
-  geom_point()+
+wrap_plots(
+  ggplot(data=db_df,aes(x=x,y=y_std,col=name))+
+  geom_line()+
+  labs(x='',y=expression(Delta[i]*beta[j]),
+       color = "Covariate"),
+  ggplot(data=LD_df,aes(x=id,y=y))+
+  geom_point(size = 1)+
   labs(x="",y=expression(LD[i]))
+)
 
 ```
 
-**Riesgos proporcionales.** 
+**Riesgos proporcionales.**
 
 ```{r}
 cox.zph(mod)
 
 ```
-
