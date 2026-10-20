@@ -51,6 +51,118 @@ data <- data %>%
 dat_all <- survival::colon %>% filter(etype == 2)   # trabajamos con los datos completos
 ```
 
+```{r desc-prep, include=FALSE}
+dat_desc <- dat_all %>%
+  mutate(
+    sex      = factor(sex, levels = c(0,1), labels = c("female","male")),
+    obstruct = factor(obstruct), perfor = factor(perfor), adhere = factor(adhere),
+    differ   = factor(differ, levels = 1:3, labels = c("well","moderate","poor")),
+    extent   = factor(extent, levels = 1:4,
+                      labels = c("submucosa","muscle","serosa","cont.str")),
+    surg     = factor(surg, levels = 0:1, labels = c("short","long")),
+    node4    = factor(node4)
+  )
+
+covs <- c("rx","sex","age","obstruct","perfor","adhere",
+          "nodes","differ","extent","surg","node4")
+stopifnot(nrow(dat_desc) == 929, sum(dat_desc$status) == 452,
+          sum(!complete.cases(dat_desc[, covs])) == 41)
+```
+
+```{r desc-tabla-prep, include=FALSE}
+resumen_cat <- function(df, var, mostrar = levels(df[[var]]), etiqueta = var) {
+  x <- df[[var]]; g <- df$rx
+  f <- function(xs) sapply(mostrar, function(l)
+    sprintf("%d (%.0f%%)", sum(xs == l, na.rm = TRUE),
+            100 * mean(xs[!is.na(xs)] == l)))
+  out <- do.call(cbind, lapply(c(list(Total = x), split(x, g)), f))
+  data.frame(Variable = paste0(etiqueta, ": ", mostrar), out,
+             check.names = FALSE, row.names = NULL)
+}
+
+resumen_num <- function(df, var, etiqueta = var) {
+  f <- function(x) sprintf("%.0f [%.0f, %.0f]", median(x, na.rm = TRUE),
+                           quantile(x, .25, na.rm = TRUE),
+                           quantile(x, .75, na.rm = TRUE))
+  out <- sapply(c(list(Total = df[[var]]), split(df[[var]], df$rx)), f)
+  data.frame(Variable = paste0(etiqueta, ", mediana [Q1, Q3]"), t(out),
+             check.names = FALSE, row.names = NULL)
+}
+
+n_rx <- table(dat_desc$rx)
+fila_n <- data.frame(Variable = "n", Total = as.character(nrow(dat_desc)),
+                     Obs = as.character(n_rx["Obs"]), Lev = as.character(n_rx["Lev"]),
+                     `Lev+5FU` = as.character(n_rx["Lev+5FU"]), check.names = FALSE)
+
+tab_desc <- rbind(
+  fila_n,
+  resumen_cat(dat_desc, "sex", "male"),
+  resumen_num(dat_desc, "age", "age (años)"),
+  resumen_num(dat_desc, "nodes"),
+  resumen_cat(dat_desc, "obstruct", "1"),
+  resumen_cat(dat_desc, "perfor", "1"),
+  resumen_cat(dat_desc, "adhere", "1"),
+  resumen_cat(dat_desc, "surg", "long"),
+  resumen_cat(dat_desc, "node4", "1"),
+  resumen_cat(dat_desc, "differ"),
+  resumen_cat(dat_desc, "extent")
+)
+```
+
+```{r desc-cifras, include=FALSE}
+# Cifras globales
+n_mue   <- sum(dat_desc$status == 1)
+n_cen   <- sum(dat_desc$status == 0)
+km_g    <- survfit(Surv(time, status) ~ 1, data = dat_desc)
+med_km  <- summary(km_g)$table[c("median", "0.95LCL", "0.95UCL")]   # supervivencia mediana (KM)
+seg_med <- summary(survfit(Surv(time, 1 - status) ~ 1,
+                           data = dat_desc))$table["median"]        # seguimiento mediano (KM invertido)
+
+# Por brazo
+km_rx  <- survfit(Surv(time, status) ~ rx, data = dat_desc)
+tab_km <- summary(km_rx)$table[, c("records","events","median","0.95LCL","0.95UCL")]
+
+p_lr <- function(f) pchisq(f$chisq, length(f$n) - 1, lower.tail = FALSE)
+lr_3      <- survdiff(Surv(time, status) ~ rx, data = dat_desc)
+lr_obslev <- survdiff(Surv(time, status) ~ rx, data = droplevels(subset(dat_desc, rx != "Lev+5FU")))
+lr_obs5fu <- survdiff(Surv(time, status) ~ rx, data = droplevels(subset(dat_desc, rx != "Lev")))
+p_3 <- p_lr(lr_3); p_obslev <- p_lr(lr_obslev); p_obs5fu <- p_lr(lr_obs5fu)
+
+# Discordancia nodes / node4
+disc_total <- with(dat_desc, sum((nodes > 4 & node4 == "0") |
+                                 (nodes <= 4 & node4 == "1"), na.rm = TRUE))
+
+ic_sup <- med_km["0.95UCL"]
+txt_ic <- if (is.na(ic_sup)) {
+  paste0("IC 95%: ", round(med_km["0.95LCL"]), " a no alcanzado")
+} else {
+  paste0("IC 95%: ", round(med_km["0.95LCL"]), " a ", round(ic_sup))
+}
+s2000   <- sprintf("%.2f", summary(km_rx, times = 2000)$surv)   # orden: Obs, Lev, Lev+5FU
+cen_med <- median(dat_desc$time[dat_desc$status == 0])
+stopifnot(disc_total == 12)
+```
+
+
+\small
+
+```{r desc-tabla}
+kable(tab_desc, caption = "Características basales por brazo de tratamiento (n y porcentaje sobre datos disponibles)")
+```
+
+\normalsize
+
+`nodes`: `r sum(is.na(dat_desc$nodes))` faltantes; `differ`: `r sum(is.na(dat_desc$differ))` faltantes.
+
+```{r desc-km, fig.width=6, fig.height=2.8, fig.align="center", fig.cap="Kaplan-Meier por brazo de tratamiento. Valor p: log-rank de los tres brazos."}
+g_km <- ggsurvplot(km_rx, data = dat_desc, conf.int = FALSE, censor = FALSE, pval = TRUE,
+                   xlab = "Días", ylab = "S(t)", legend.title = "",
+                   legend.labs = c("Obs", "Lev", "Lev+5FU"), ggtheme = theme_bw())
+print(g_km)
+```
+
+Se analizaron `r nrow(dat_desc)` pacientes, con `r n_mue` muertes (`r round(100*n_mue/nrow(dat_desc), 1)`%) y `r n_cen` censuras; los tres brazos son similares en las covariables basales (Tabla 1). La mediana de supervivencia por Kaplan-Meier fue de `r round(med_km["median"])` días (`r txt_ic`) y el seguimiento mediano, por Kaplan-Meier invertido, de `r round(seg_med)` días. La mayoría de las censuras ocurre tarde (mediana de `r round(cen_med)` días), lo que es compatible con censura administrativa. Como muestra la Figura 1, Lev+5FU tiene mayor supervivencia: a 2000 días S(t) fue `r s2000[3]`, contra `r s2000[1]` en Obs y `r s2000[2]` en Lev, y su mediana no se alcanzó. El log-rank rechaza la igualdad de los tres brazos (p = `r round(p_3, 3)`) y de Obs contra Lev+5FU (p = `r round(p_obs5fu, 3)`; sin ajuste por comparaciones múltiples, aunque con Bonferroni la conclusión se mantiene), pero no hay evidencia para rechazar que Obs y Lev sean iguales (p = `r round(p_obslev, 2)`), lo que motiva unirlos en el modelo de Cox. Faltan `r sum(is.na(dat_desc$nodes))` valores de `nodes` y `r sum(is.na(dat_desc$differ))` de `differ`, sin pacientes en común, y `r disc_total` pacientes tienen `nodes` y `node4` mutuamente inconsistentes; como no se sabe cuál es la correcta, se conservaron sin corregir.
+
 ```{r verif-muestra, include=FALSE}
 # Los puntos 1 y 2 usan los 929 pacientes (sin covariables no hay razón para
 # descartar a nadie). Los puntos 3 y 4 usan solo casos completos en covariables.
