@@ -153,7 +153,7 @@ kable(tab_desc, caption = "Características basales por brazo de tratamiento (n 
 
 `nodes`: `r sum(is.na(dat_desc$nodes))` faltantes; `differ`: `r sum(is.na(dat_desc$differ))` faltantes.
 
-```{r desc-km, fig.width=6, fig.height=2.8, fig.align="center", fig.cap="Kaplan-Meier por brazo de tratamiento. Valor p: log-rank de los tres brazos."}
+```{r desc-km, fig.width=5, fig.height=2.4, fig.align="center", fig.cap="Kaplan-Meier por brazo de tratamiento. Valor p: log-rank de los tres brazos."}
 g_km <- ggsurvplot(km_rx, data = dat_desc, conf.int = FALSE, censor = FALSE, pval = TRUE,
                    xlab = "Días", ylab = "S(t)", legend.title = "",
                    legend.labs = c("Obs", "Lev", "Lev+5FU"), ggtheme = theme_bw())
@@ -219,7 +219,7 @@ rownames(tab_f) <- rownames(tab_emv)
 kable(tab_f, align = "rrr", caption = "Log-normal: estimadores de máxima verosimilitud y mediana")
 ```
 
-```{r figura, fig.width=7, fig.height=3.2, fig.align="center", fig.cap="Supervivencia y riesgo estimados (log-normal). Banda: IC 95% por simulación."}
+```{r figura, fig.width=6, fig.height=2.8, fig.align="center", fig.cap="Supervivencia y riesgo estimados (log-normal). Banda: IC 95% por simulación."}
 set.seed(2026)
 tt <- seq(10, 3300, length.out = 200)
 S <- summary(fl, t = tt, type = "survival", ci = TRUE, B = 1000)[[1]]
@@ -308,15 +308,15 @@ cmp$dentro <- cmp$LN >= cmp$KM_l & cmp$LN <= cmp$KM_u
 ```
 
 ```{r km-figura, fig.width=6, fig.height=3, fig.align="center", fig.cap="Kaplan–Meier (negro, banda gris) vs. log-normal (azul, banda IC 95%)."}
-ggplot(cmp, aes(time)) +
-  geom_ribbon(aes(ymin = KM_l, ymax = KM_u), fill = "grey50", alpha = .30) +
-  geom_ribbon(aes(ymin = LN_l, ymax = LN_u), fill = "steelblue", alpha = .25) +
-  geom_line(aes(y = LN), colour = "steelblue", linewidth = 1) +
-  geom_step(aes(y = KM), colour = "black") +
-  labs(x = "Días", y = "S(t)", title = "Supervivencia",
-       subtitle = "Negro: Kaplan-Meier. Azul: log-normal") +
-  ylim(0, 1) +
-  theme_bw()
+#ggplot(cmp, aes(time)) +
+#  geom_ribbon(aes(ymin = KM_l, ymax = KM_u), fill = "grey50", alpha = .30) +
+#  geom_ribbon(aes(ymin = LN_l, ymax = LN_u), fill = "steelblue", alpha = .25) +
+#  geom_line(aes(y = LN), colour = "steelblue", linewidth = 1) +
+#  geom_step(aes(y = KM), colour = "black") +
+#  labs(x = "Días", y = "S(t)", title = "Supervivencia",
+#       subtitle = "Negro: Kaplan-Meier. Azul: log-normal") +
+#  ylim(0, 1) +
+#   theme_bw()
 ```
 
 ```{r km-diagnosticos, fig.width=6, fig.height=3, fig.align="center", fig.cap="Izquierda: diferencia entre la log-normal y KM. Derecha: riesgo acumulado de ambos modelos (la recta roja es la identidad)."}
@@ -376,7 +376,7 @@ dif_med <- mean(abs(cmp$dif))
 prop_in <- mean(cmp$dentro, na.rm = TRUE)
 ```
 
-**Resultados.** La curva log-normal sigue la forma global del KM; la diferencia absoluta promedio entre ambas es de `r round(dif_med, 3)`. La mayor diferencia positiva (`r round(dif_pos, 3)`) ocurre cerca del día `r round(t_pos)`, donde el modelo sobreestima la supervivencia, y la mayor diferencia negativa (`r round(dif_neg, 3)`) cerca del día `r round(t_neg)`, en la cola, donde la subestima. La log-normal queda dentro del IC 95% del KM en `r round(100 * prop_in, 1)`% del rango observado. En los tiempos clave, solo a los 1000 días su estimación (`r round(tab_comp$LN[2], 3)`) queda fuera del IC del KM (`r round(tab_comp$KM_inf[2], 3)`, `r round(tab_comp$KM_sup[2], 3)`). La mediana del KM es de `r round(med_km["median"])` días, con límite inferior de `r round(med_km["0.95LCL"])` y límite superior no estimable (la banda superior del KM no cruza 0.5 en el seguimiento observado); la de la log-normal es de `r round(med_ln["est"])` días, ligeramente menor pero dentro del IC del KM.
+**Resultados.** La curva log-normal sigue la forma global del KM (como se vió en la Figura 2. en el inciso 1); la diferencia absoluta promedio entre ambas es de `r round(dif_med, 3)`. La mayor diferencia positiva (`r round(dif_pos, 3)`) ocurre cerca del día `r round(t_pos)`, donde el modelo sobreestima la supervivencia, y la mayor diferencia negativa (`r round(dif_neg, 3)`) cerca del día `r round(t_neg)`, en la cola, donde la subestima. La log-normal queda dentro del IC 95% del KM en `r round(100 * prop_in, 1)`% del rango observado. En los tiempos clave, solo a los 1000 días su estimación (`r round(tab_comp$LN[2], 3)`) queda fuera del IC del KM (`r round(tab_comp$KM_inf[2], 3)`, `r round(tab_comp$KM_sup[2], 3)`). La mediana del KM es de `r round(med_km["median"])` días, con límite inferior de `r round(med_km["0.95LCL"])` y límite superior no estimable (la banda superior del KM no cruza 0.5 en el seguimiento observado); la de la log-normal es de `r round(med_ln["est"])` días, ligeramente menor pero dentro del IC del KM.
 
 **Discusión.**El modelo log-normal describe de manera razonable, aunque no perfecta, los datos. Reproduce el descenso global de la supervivencia y la mediana, y en casi todo el rango sus diferencias con el KM son pequeñas (menores a 0.05 en S(t)). Sin embargo, las diferencias son sistemáticas: hasta ~700 días la log-normal queda apenas por debajo del KM; entre ~700 y ~2000 días queda por encima, con máximo cerca de 1000 a 1500 días, y a los 1000 días su estimación sale del IC 95% del KM, que es la única discrepancia de ese tipo en los tiempos clave; después de ~2000 días la relación se invierte y el modelo subestima la supervivencia, porque el KM se aplana ($\approx$ 0.45 al final) mientras la log-normal sigue descendiendo. En esa cola hay pocos pacientes en riesgo y el IC del KM es amplio, por lo que debe interpretarse con cautela. Esto es consistente con el punto 1, donde la gamma generalizada obtuvo mejor AIC y la prueba de razón de verosimilitud rechazó la log-normal al 5%. En conjunto, la log-normal es una aproximación útil, pero si el interés fuera una predicción a tiempos largos convendría un modelo más flexible, como la gamma generalizada.
 
@@ -459,11 +459,11 @@ kable(
 
 Son rechazadas todas las pruebas, el modelo es significativo globalmente. Se observa una concordancia de 67.51% indicando un ajuste modesto.
 
-**Selección de variables.** Realizando una prueba de ZPH en el modelo con todas las covariables se verificó que solamente tres variables no cumplen el supuesto de riesgos proporcionales individualmente (obstruct, differ, node4). Estas afectan al modelo global y es mejor eliminarlas (incluso si algunas son significantes).
+**Selección de variables.** Realizando una prueba de ZPH en el modelo con todas las covariables se verificó que solamente tres variables no cumplen el supuesto de riesgos proporcionales individualmente (obstruct, differ, node4). Estas afectan al modelo global y es consideramos mejor eliminarlas (incluso si algunas son significantes).
 
-Otro cambio que se realizó fue en la base directamente al unir rxLev y rxObs con el objetivo de refinar el modelo ligeramente. Esta decisión surgió ya que al grupo al que se le aplicó levamisol (un fármaco utilizado contra gusanos parásitos) no es significante contra el riesgo base (grupo de observación). Usando el criterio AIC y BIC comparamos ambos modelos originales y obtuvimos un mejor modelo utilizando la base de datos refinada.
+Otro cambio que se realizó fue en la base directamente al unir rxLev y rxObs con el objetivo de refinar el modelo ligeramente. Esta decisión surgió ya que se vio en el análisis descriptivo que no hubo evidencia para rechazar que la población de Obs y Lev sean iguales. Usando el criterio AIC y BIC comparamos ambos modelos originales y obtuvimos un mejor modelo utilizando la base de datos refinada.
 
-Se usó la función stepAIC hacia atrás desde el modelo con las covariables obstruct, differ y node4 eliminadas (variables que no cumplen riesgos proporcionales) y el mejor modelo fue usando solamente rx, adhere, nodes, extent y surg. Como ultimo ajuste se estandariza nodes (nodes_z) y se agrega un polinomio cúbico (justificado posteriormente).
+Se usó la función stepAIC hacia atrás desde el modelo con las covariables obstruct, differ y node4 eliminadas y el mejor modelo fue usando solamente rx, adhere, nodes, extent y surg. Como último ajuste se estandariza nodes (nodes_z) y se agrega un polinomio cúbico (justificado posteriormente).
 
 Los coeficientes se muestran en la siguiente tabla
 
@@ -531,15 +531,13 @@ De los coeficientes significantes se registran los siguientes efectos al riesgo 
 - extentmuscle: disminución de 36.89%.
 - surglong: aumento de 27.43%.
 
-En el caso de nodes en el que tenemos un polinomio de grado 3. Ocurrirá que la razón de riesgo por cada nódulo adicional dependerá de la misma variable. Es decir
+En el caso de nodes en el que tenemos un polinomio de grado 3. Ocurrirá que la razón de riesgo por cada desviación estándar adicional dependerá de la misma variable. Es decir
 
 $$
-\frac{h_j(t; \text{nodes} = Z + 1)}{h_i(t; \text{nodes} = Z)} = \exp({\beta_3 + \beta_4(2Z + 1) +  \beta_5(3Z^2 + 3Z + 1}))
+\frac{h_j(t; \text{nodes z} = Z + 1)}{h_i(t; \text{nodes z} = Z)} = \exp({\beta_3 + \beta_4(2Z + 1) +  \beta_5(3Z^2 + 3Z + 1}))
 $$
 
-donde $Z = \frac{X - \bar{X}}{s_X}$.
-
-En general, el polinomio cúbico nos ayuda a controlar valores extremos en los nódulos (se tiene un máximo de 33 nódulos) ya que el 79.4% de los datos tiene no mas de 5 nódulos. Esto es notorio debido al valor negativo pequeño en el término cuadrado y un valor muy cercano a cero en el término cúbico (no es significante como tal pero su efecto no es menor a 1).
+donde $Z = \frac{\text{nodes} - \bar{\text{nodes}}}{s_\text{nodes}}$.
 
 De los coeficientes no significantes se tienen los siguientes efectos al riesgo base. Los intervalos de confianza indican que es posible que se vea un efecto opuesto al estimado, esto debido a posible falta de observaciones de estas categorías.
 
@@ -758,7 +756,9 @@ kable(
 
 Individualmente no se rechaza el supuesto de riesgos proporcionales en ninguna covariable. Globalmente obtuvimos un valor cercano a 0.05 pero no podemos rechazar que el modelo en general cumple el supuesto.
 
-### 4. Regresión paramétrica. Por el inciso 1 se ajusto el modelo paramétrico utilizando la distribución log-normal. Hacemos la regresión paramétrica
+### 4. Regresión paramétrica. 
+
+Por el inciso 1 se ajusto el modelo paramétrico utilizando la distribución log-normal. Hacemos la regresión paramétrica
 
 ```{r}
 
@@ -805,7 +805,7 @@ kable(
 
 **Verificación de supuestos.** Verificamos el ajuste global y devianza sobre el tiempo para el modelo paramétrico.
 
-```{r fig.width=6, fig.height=4}
+```{r fig.width=4, fig.height=3}
 # Cox - Snell residuals
 res_cs = residuals(mod_par,type='coxsnell')
 
@@ -822,21 +822,15 @@ res_dev = sign(res_mar)*sqrt((-2*(res_mar+
                 data_ref$status*log(data_ref$status-res_mar))))
 data_ref$Dev = res_dev
 
-wrap_plots(
-  ggplot(data=df,aes(x=x,y=y))+
-    geom_line(col='darkgrey')+
-    geom_point(size=.5)+
-    labs(x="Cox-Snell",y=expression(hat(H[t])))+
-    geom_abline(intercept=0,slope=1,col="darkred"),
-  ggplot(data=data_ref,aes(x=time,y=Dev,colour = status))+
-    geom_point(size =.5)+
-    geom_hline(yintercept=0,col='red')+
-    labs(x="Survival time",y="Deviance residuals"),
-  ncol = 2
-)
+
+ggplot(data=df,aes(x=x,y=y))+
+  geom_line(col='darkgrey')+
+  geom_point(size=.5)+
+  labs(x="Cox-Snell",y=expression(hat(H[t])))+
+  geom_abline(intercept=0,slope=1,col="darkred")
 
 ```
 
-En la regresión paramétrica se ve que en los residuales Cox-Snell los puntos tienden a desviarse mas en comparación con el modelo de Cox pero en general muestran un buen ajuste. En cuanto a la devianza se muestra el mismo patrón que el mdoelo de Cox indicando que las censuras siempre tienen devianza negativa y que las devianzas dependen del tiempo (a tiempos pequeños, devianzas mas grandes).
+En la regresión paramétrica se ve que en los residuales Cox-Snell los puntos tienden a desviarse mas en comparación con el modelo de Cox. El ajuste no es tan bueno como el de Cox. 
 
 Para concluir, no podemos decir que obtengamos un mejor ajuste con la regresión paramétrica. Pero a nuestra consideración, es mas sencillo la interpretación del modelo de Cox. En especial porque el concepto de HR es mucho mas interpretativo o nos permite entender mejor como es que la covariable afecta al riesgo de la población. 
