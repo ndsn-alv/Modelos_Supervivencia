@@ -21,6 +21,7 @@ library(survminer)
 library(dplyr)
 library(flexsurv)
 library(knitr)
+library(patchwork)
 
 ```
 
@@ -639,6 +640,7 @@ kable(
   outliers %>% select(id, time, status, rx, adhere, nodes, extent, surg),
   caption = "Individuos con devianza alta"
 )
+
 ```
 
 Todos los individuos tienen tiempos de muerte pequeños como se esperaba que ocurriera en la gráfica (la mediana del tiempo de muerte es de 774.5). También es notable el hecho de que todos pertenecen a extend_serosa (grupo base en extend). 
@@ -685,7 +687,8 @@ wrap_plots(
        color = "Covariate"),
   ggplot(data=LD_df,aes(x=id,y=y))+
   geom_point(size = 1)+
-  labs(x="",y=expression(LD[i]))
+  labs(x="",y=expression(LD[i])),
+  ncol=2
 )
 
 ```
