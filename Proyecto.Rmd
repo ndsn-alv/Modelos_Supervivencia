@@ -278,6 +278,108 @@ El riesgo estimado sube rápido, alcanza su máximo cerca de los `r round(t_pico
 
 La curva de Kaplan-Meier queda cerca de la log-normal, con una desviación moderada entre \~800 y \~1500 días, donde la log-normal sobrestima la supervivencia hasta unos 0.04.
 
+## 2. Estimador de Kaplan–Meier y comparación con el modelo paramétrico
+
+Se ajusta el estimador de Kaplan–Meier (KM), que no supone ninguna forma para $S(t)$, y se compara con la supervivencia estimada por el modelo log-normal del punto anterior (sin covariables, `r nrow(dat_all)` pacientes). El KM se usa como referencia para evaluar si el modelo paramétrico describe adecuadamente los datos.
+
+```{r km-ajuste}
+# KM con IC 95% en escala log-log (igual que en la verificación del punto 1)
+km2 <- survfit(Surv(time, status) ~ 1, data = dat_all, conf.type = "log-log")
+
+# Rejilla de tiempos dentro del rango observado
+tmax <- max(dat_all$time)
+tt2  <- seq(10, tmax, length.out = 300)
+
+# KM como función escalonada (para evaluarlo en cualquier t)
+km_f  <- stepfun(km2$time, c(1, km2$surv))
+km_lo <- stepfun(km2$time, c(1, km2$lower))
+km_up <- stepfun(km2$time, c(1, km2$upper))
+
+# Log-normal con IC 95% por simulación
+set.seed(2026)
+S2 <- summary(fl, t = tt2, type = "survival", ci = TRUE, B = 1000)[[1]]
+
+cmp <- data.frame(
+  time = tt2,
+  KM   = km_f(tt2),  KM_l = km_lo(tt2), KM_u = km_up(tt2),
+  LN   = S2$est,     LN_l = S2$lcl,     LN_u = S2$ucl
+)
+cmp$dif    <- cmp$LN - cmp$KM
+cmp$dentro <- cmp$LN >= cmp$KM_l & cmp$LN <= cmp$KM_u
+```
+
+```{r km-figura, fig.width=7, fig.height=3.4, fig.align="center", fig.cap="Kaplan–Meier (negro, banda gris) vs. log-normal (azul, banda IC 95%)."}
+ggplot(cmp, aes(time)) +
+  geom_ribbon(aes(ymin = KM_l, ymax = KM_u), fill = "grey50", alpha = .30) +
+  geom_ribbon(aes(ymin = LN_l, ymax = LN_u), fill = "steelblue", alpha = .25) +
+  geom_line(aes(y = LN), colour = "steelblue", linewidth = 1) +
+  geom_step(aes(y = KM), colour = "black") +
+  labs(x = "Días", y = "S(t)", title = "Supervivencia",
+       subtitle = "Negro: Kaplan-Meier. Azul: log-normal") +
+  ylim(0, 1) +
+  theme_bw()
+```
+
+```{r km-diagnosticos, fig.width=7, fig.height=3.2, fig.align="center", fig.cap="Izquierda: diferencia entre la log-normal y KM. Derecha: riesgo acumulado de ambos modelos (la recta roja es la identidad)."}
+g3 <- ggplot(cmp, aes(time, dif)) +
+  geom_line(colour = "steelblue", linewidth = 1) +
+  geom_hline(yintercept = 0, colour = "red") +
+  labs(x = "Días", y = "S_LN(t) - S_KM(t)", title = "Diferencia entre curvas") +
+  theme_bw()
+
+g4 <- ggplot(cmp, aes(-log(KM), -log(LN))) +
+  geom_line(colour = "steelblue", linewidth = 1) +
+  geom_abline(slope = 1, intercept = 0, colour = "red") +
+  labs(x = "Riesgo acumulado KM", y = "Riesgo acumulado log-normal",
+       title = "Riesgo acumulado") +
+  theme_bw()
+
+ggpubr::ggarrange(g3, g4, ncol = 2)
+```
+
+```{r km-tabla}
+# Supervivencia en tiempos clave: KM (IC log-log) vs. log-normal (IC simulado)
+tk2 <- c(500, 1000, 1500, 2000, 2500, 3000)
+sk2 <- summary(km2, times = tk2)
+set.seed(2026)
+Sk2 <- summary(fl, t = tk2, type = "survival", ci = TRUE, B = 1000)[[1]]
+
+tab_comp <- data.frame(
+  Días = tk2,
+  KM = sk2$surv, KM_inf = sk2$lower, KM_sup = sk2$upper,
+  LN = Sk2$est,  LN_inf = Sk2$lcl,   LN_sup = Sk2$ucl
+)
+tab_comp$Dif <- tab_comp$LN - tab_comp$KM
+tab_comp$LN_en_IC_KM <- ifelse(tab_comp$LN >= tab_comp$KM_inf &
+                               tab_comp$LN <= tab_comp$KM_sup, "Sí", "No")
+
+kable(tab_comp, digits = 3,
+      caption = "Supervivencia estimada: Kaplan-Meier vs. log-normal")
+```
+```{r km-medianas}
+# Mediana: KM vs. log-normal
+med_km <- summary(km2)$table[c("median", "0.95LCL", "0.95UCL")]
+med_ln <- exp(fl$res["meanlog", c("est", "L95%", "U95%")])
+
+tab_med <- rbind("Kaplan-Meier" = med_km, "Log-normal" = med_ln)
+tab_med_f <- apply(tab_med, 2, function(x)
+  ifelse(is.na(x), "No estimable", sprintf("%.0f", x)))
+rownames(tab_med_f) <- rownames(tab_med)
+colnames(tab_med_f) <- c("Mediana (días)", "IC inf. 95%", "IC sup. 95%")
+kable(tab_med_f, align = "rrr",
+      caption = "Mediana de supervivencia: KM vs. log-normal")
+```
+
+```{r km-resumen, include=FALSE}
+i_pos <- which.max(cmp$dif); dif_pos <- cmp$dif[i_pos]; t_pos <- cmp$time[i_pos]
+i_neg <- which.min(cmp$dif); dif_neg <- cmp$dif[i_neg]; t_neg <- cmp$time[i_neg]
+dif_med <- mean(abs(cmp$dif))
+prop_in <- mean(cmp$dentro, na.rm = TRUE)
+```
+**Resultados.** La curva log-normal sigue la forma global del KM; la diferencia absoluta promedio entre ambas es de `r round(dif_med, 3)`. La mayor diferencia positiva (`r round(dif_pos, 3)`) ocurre cerca del día `r round(t_pos)`, donde el modelo sobreestima la supervivencia, y la mayor diferencia negativa (`r round(dif_neg, 3)`) cerca del día `r round(t_neg)`, en la cola, donde la subestima. La log-normal queda dentro del IC 95% del KM en `r round(100 * prop_in, 1)`% del rango observado. En los tiempos clave, solo a los 1000 días su estimación (`r round(tab_comp$LN[2], 3)`) queda fuera del IC del KM (`r round(tab_comp$KM_inf[2], 3)`, `r round(tab_comp$KM_sup[2], 3)`). La mediana del KM es de `r round(med_km["median"])` días, con límite inferior de `r round(med_km["0.95LCL"])` y límite superior no estimable (la banda superior del KM no cruza 0.5 en el seguimiento observado); la de la log-normal es de `r round(med_ln["est"])` días, ligeramente menor pero dentro del IC del KM.
+
+**Discusión.**El modelo log-normal describe de manera razonable, aunque no perfecta, los datos. Reproduce el descenso global de la supervivencia y la mediana, y en casi todo el rango sus diferencias con el KM son pequeñas (menores a 0.05 en S(t)). Sin embargo, las diferencias son sistemáticas: hasta ~700 días la log-normal queda apenas por debajo del KM; entre ~700 y ~2000 días queda por encima, con máximo cerca de 1000 a 1500 días, y a los 1000 días su estimación sale del IC 95% del KM, que es la única discrepancia de ese tipo en los tiempos clave; después de ~2000 días la relación se invierte y el modelo subestima la supervivencia, porque el KM se aplana ($\approx$ 0.45 al final) mientras la log-normal sigue descendiendo. En esa cola hay pocos pacientes en riesgo y el IC del KM es amplio, por lo que debe interpretarse con cautela. Esto es consistente con el punto 1, donde la gamma generalizada obtuvo mejor AIC y la prueba de razón de verosimilitud rechazó la log-normal al 5%. En conjunto, la log-normal es una aproximación útil, pero si el interés fuera una predicción a tiempos largos convendría un modelo más flexible, como la gamma generalizada.
+
 ### 4. Ajuste de un modelo de Cox. Se ajusta un modelo de riesgos proporcionales usando todas las covariables de la base datos. Obtenemos 15 parámetros de las cuales individualmente solo 6 son significativos.
 
 **Razones de riesgo (HR).** Las HR de las covariables categóricas indican que si el individuo se encuentra en uno de los siguientes grupos su riesgo aumenta o disminuye respecto al grupo base a una proporción $\exp(\beta)$.
